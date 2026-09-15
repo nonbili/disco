@@ -98,6 +98,8 @@ const state: State = (await stateFile.exists()) ? await stateFile.json() : { cha
 const runStart = String((BigInt(Date.now()) - DISCORD_EPOCH) << 22n);
 let failed = false;
 
+// The bot's own messages (release posts from notify.ts) aren't bridged.
+const bot: User = await discord(discordToken, "/users/@me");
 const guilds: { id: string }[] = await discord(discordToken, "/users/@me/guilds");
 if (guilds.length !== 1) throw new Error(`bot must be in exactly one server, found ${guilds.length}`);
 const guild = guilds[0]!.id;
@@ -165,7 +167,7 @@ for (const m of pending.sort(byId)) {
   ]
     .filter(Boolean)
     .join("\n");
-  if (MESSAGE_TYPES.has(m.type) && body) {
+  if (MESSAGE_TYPES.has(m.type) && m.author.id !== bot.id && body) {
     const link = `https://discord.com/channels/${guild}/${m.channel_id}/${m.id}`;
     try {
       await slack(slackToken, "chat.postMessage", {
