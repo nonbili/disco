@@ -1,11 +1,10 @@
 // Poll GitHub release Atom feeds and post new releases to Discord channels via a bot.
 
 import { XMLParser } from "fast-xml-parser";
+import { discord, USER_AGENT } from "./discord.ts";
 
 const REPOS_FILE = new URL("./repos.txt", import.meta.url).pathname;
 const STATE_FILE = new URL("./state.json", import.meta.url).pathname;
-const USER_AGENT = "DiscordBot (https://github.com, 1) disco-release-notifier";
-const DISCORD_API = "https://discord.com/api/v10";
 const MAX_SEEN = 100;
 const PRERELEASE_RE = /-(alpha|beta|rc|pre|dev|canary|nightly)/i;
 
@@ -61,21 +60,6 @@ function htmlToText(s: string): string {
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-}
-
-async function discord(token: string, path: string, body?: unknown): Promise<any> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await fetch(`${DISCORD_API}${path}`, {
-      method: body === undefined ? "GET" : "POST",
-      headers: { Authorization: `Bot ${token}`, "Content-Type": "application/json", "User-Agent": USER_AGENT },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    if (res.ok) return res.json();
-    if (res.status !== 429) throw new Error(`Discord HTTP ${res.status} ${path}: ${await res.text()}`);
-    const { retry_after = 2 } = (await res.json().catch(() => ({}))) as { retry_after?: number };
-    await Bun.sleep(retry_after * 1000);
-  }
-  throw new Error("Discord rate limit retries exhausted");
 }
 
 // 15 = GUILD_FORUM, 16 = GUILD_MEDIA: these only accept new posts (threads), not messages.

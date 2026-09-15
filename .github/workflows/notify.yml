@@ -28,17 +28,24 @@ jobs:
           SKIP_PRERELEASE: "false"
         run: bun notify.ts
 
+      - name: Bridge Discord messages to Slack
+        if: success() || failure()
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ vars.SLACK_CHANNEL_ID }}
+        run: bun bridge.ts
+
       - name: Commit state
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          [ -f state.json ] || exit 0
-          git add state.json
+          for f in state.json bridge-state.json; do [ -f "$f" ] && git add "$f"; done
           git diff --cached --quiet && exit 0
-          git commit -m "Update release state"
-          # Discord posts already went out, so the state must land even if the
-          # branch moved since checkout: rebase onto it and retry.
+          git commit -m "Update state"
+          # Discord and Slack posts already went out, so the state must land even if
+          # the branch moved since checkout: rebase onto it and retry.
           for attempt in 1 2 3 4 5; do
             git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
             echo "push rejected (attempt $attempt), rebasing"
