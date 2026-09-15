@@ -1,0 +1,10 @@
+# One repo per line: owner/name channel_id [forum tag]
+# Get a channel ID with Developer Mode on: right-click the channel → Copy Channel ID.
+# channel_id can be a text channel, a forum (each release becomes a new post, optionally
+# tagged with the forum tag name), or a thread / existing forum post (releases become replies).
+nonbili/meron 1549206078057750659
+nonbili/Nora 1549206455582728293
+nonbili/Nora-Desktop 1549206455582728293
+nonbili/Nori 1549205730949865572
+nonbili/NouTube 1549206327601930460
+nonbili/NouTube-Desktop 1549206327601930460

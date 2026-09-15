@@ -1,0 +1,53 @@
+name: Release notifications
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Check feeds and post to Discord
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          SKIP_PRERELEASE: "false"
+        run: bun notify.ts
+
+      - name: Commit state
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          [ -f state.json ] || exit 0
+          git add state.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update release state"
+          # Discord posts already went out, so the state must land even if the
+          # branch moved since checkout: rebase onto it and retry.
+          for attempt in 1 2 3 4 5; do
+            git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            echo "push rejected (attempt $attempt), rebasing"
+            sleep $((attempt * 2))
+            if ! git pull --rebase origin "$GITHUB_REF_NAME"; then
+              git rebase --abort || true
+              echo "::error::could not rebase state.json onto $GITHUB_REF_NAME"
+              exit 1
+            fi
+          done
+          echo "::error::failed to push state.json after 5 attempts"
+          exit 1
