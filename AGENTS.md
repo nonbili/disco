@@ -4,7 +4,7 @@ Posts new GitHub releases to Discord channels on a single server, and bridges th
 
 ## How it works
 
-- `.github/workflows/notify.yml` runs `bun notify.ts` then `bun bridge.ts` every 6 hours (and via manual dispatch), then commits `state.json` and `bridge-state.json`.
+- `.github/workflows/notify.yml` runs `bun notify.ts` then `bun bridge.ts` every 4 hours (and via manual dispatch), then commits `state.json` and `bridge-state.json`.
 - `discord.ts`: shared Discord REST helper (429 retry, `HttpError` with status).
 - `notify.ts` reads `https://github.com/<repo>/releases.atom` for each repo in `repos.txt` and posts unseen entries through a Discord bot (`DISCORD_BOT_TOKEN` secret).
 - `repos.txt`: `owner/name channel_id [forum tag]`, one per line, `#` comments.
