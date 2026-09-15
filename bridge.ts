@@ -1,6 +1,7 @@
 // Poll every readable channel on the Discord server and bridge new messages to one Slack channel.
 
 import { discord, HttpError } from "./discord.ts";
+import { readRepos } from "./repos.ts";
 
 const STATE_FILE = new URL("./bridge-state.json", import.meta.url).pathname;
 const SLACK_API = "https://slack.com/api";
@@ -106,13 +107,36 @@ const guild = guilds[0]!.id;
 
 const guildChannels: Channel[] = await discord(discordToken, `/guilds/${guild}/channels`);
 const { threads }: { threads: Channel[] } = await discord(discordToken, `/guilds/${guild}/threads/active`);
+const known = new Map<string, Channel>();
+for (const ch of [...guildChannels, ...threads]) known.set(ch.id, ch);
+let skipped = 0;
+
+// Only the channels named in repos.txt are bridged. A listed ID that is neither a guild channel
+// nor an active thread is an archived thread or forum post, so ask Discord about it directly.
+const listed = new Set((await readRepos()).map((t) => t.channel));
+for (const id of listed) {
+  if (known.has(id)) continue;
+  try {
+    known.set(id, await discord(discordToken, `/channels/${id}`));
+  } catch (err) {
+    if (!(err instanceof HttpError && (err.status === 403 || err.status === 404))) throw err;
+    skipped++;
+  }
+}
+
+// A listed forum is bridged through its posts, not as a channel; a listed text channel or
+// thread is bridged directly, together with the threads and forum posts underneath it.
 const sources = new Map<string, Channel>();
-for (const ch of [...guildChannels.filter((c) => TEXT_TYPES.has(c.type)), ...threads]) sources.set(ch.id, ch);
+for (const ch of known.values()) {
+  const self = listed.has(ch.id) && (TEXT_TYPES.has(ch.type) || THREAD_TYPES.has(ch.type));
+  const underListed = THREAD_TYPES.has(ch.type) && !!ch.parent_id && listed.has(ch.parent_id);
+  if (self || underListed) sources.set(ch.id, ch);
+}
 
 // Threads archived since the last run may still hold unbridged messages.
 if (state.since) {
   const sinceMs = Number((BigInt(state.since) >> 22n) + DISCORD_EPOCH);
-  for (const parent of guildChannels.filter((c) => THREAD_PARENT_TYPES.has(c.type))) {
+  for (const parent of guildChannels.filter((c) => THREAD_PARENT_TYPES.has(c.type) && listed.has(c.id))) {
     try {
       const archived: { threads: Channel[] } = await discord(discordToken, `/channels/${parent.id}/threads/archived/public`);
       for (const t of archived.threads) {
@@ -134,6 +158,7 @@ function label(ch: Channel): string {
 // (access granted, thread unarchived) resumes from `since`, which precedes any message it missed.
 const cursors: Record<string, string> = {};
 const pending: Message[] = [];
+let read = 0;
 for (const ch of sources.values()) {
   const after = state.channels[ch.id] ?? state.since;
   if (after === undefined) {
@@ -144,9 +169,11 @@ for (const ch of sources.values()) {
   try {
     pending.push(...(await fetchAfter(discordToken, ch.id, after)));
     cursors[ch.id] = after;
+    read++;
   } catch (err) {
     if (err instanceof HttpError && (err.status === 403 || err.status === 404)) {
-      console.log(`${label(ch)}: skipped (HTTP ${err.status})`);
+      // Channels the bot can't read are private; don't name them in the public run log.
+      skipped++;
       continue;
     }
     failed = true;
@@ -186,7 +213,7 @@ for (const m of pending.sort(byId)) {
   }
   cursors[m.channel_id] = m.id;
 }
-console.log(`bridged ${posted} of ${pending.length} new messages from ${sources.size} channels`);
+console.log(`bridged ${posted} of ${pending.length} new messages from ${read} channels, ${skipped} skipped`);
 
 // Only advance `since` when every visible channel has a cursor that covers it.
 const since = failed ? state.since : runStart;

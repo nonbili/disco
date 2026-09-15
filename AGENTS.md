@@ -6,13 +6,14 @@ Posts new GitHub releases to Discord channels on a single server, and bridges th
 
 - `.github/workflows/notify.yml` runs `bun notify.ts` then `bun bridge.ts` every 4 hours (and via manual dispatch), then commits `state.json` and `bridge-state.json`.
 - `discord.ts`: shared Discord REST helper (429 retry, `HttpError` with status).
+- `repos.ts`: shared `repos.txt` reader, used by both scripts.
 - `notify.ts` reads `https://github.com/<repo>/releases.atom` for each repo in `repos.txt` and posts unseen entries through a Discord bot (`DISCORD_BOT_TOKEN` secret).
 - `repos.txt`: `owner/name channel_id [forum tag]`, one per line, `#` comments.
   - Text/announcement channel or thread/forum post ID → message.
   - Forum/media channel (type 15/16, detected via `GET /channels/:id`) → new post per release; optional tag name must already exist on the forum.
 - `state.json`: seen Atom entry IDs per repo (last 100). A repo with no entry is seeded without posting, so adding a repo never floods a channel. An entry is marked seen only after Discord accepts the post.
 - The state commit step rebases and retries the push up to 5 times so a concurrent push can't cause duplicate posts; a conflict on a state file fails the job loudly.
-- `bridge.ts`: finds the bot's only server, reads text/announcement/voice channels, active threads, and public threads archived since the last run, fetches messages after each channel's cursor, and posts them to Slack in server-wide snowflake order via `chat.postMessage` with the Discord author's name and avatar. Channels the bot can't read (403/404) are skipped, as are the bot's own messages. Edits, deletes and reactions are not bridged.
+- `bridge.ts`: finds the bot's only server and bridges **only the channels listed in `repos.txt`** — a listed text/announcement channel or thread, plus any thread or forum post under a listed channel (a listed forum is bridged through its posts, never as a channel). Everything else on the server, private or not, is never read, so channels the bot doesn't need stay out of both Slack and the run log. Messages after each channel's cursor are posted to Slack in server-wide snowflake order via `chat.postMessage` with the Discord author's name and avatar. Channels the bot can't read (403/404) are skipped and only counted in the summary line, never named, so channel names stay out of the public Actions log; the bot's own messages are skipped too. Edits, deletes and reactions are not bridged.
 - `bridge-state.json`: `since` (snowflake of the last successful run's start) plus the last bridged message ID per channel. The first run seeds without posting; channels without a cursor (new channels and threads, regained access) are read from `since`. Posting stops at the first Slack failure, and a cursor advances only after Slack accepts the message.
 
 ## Setup
