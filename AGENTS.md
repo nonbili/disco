@@ -6,9 +6,9 @@ Posts new GitHub releases to Discord channels on a single server, and bridges th
 
 - `.github/workflows/notify.yml` runs `bun notify.ts` then `bun bridge.ts` every 4 hours (and via manual dispatch), then commits `state.json` and `bridge-state.json`.
 - `discord.ts`: shared Discord REST helper (429 retry, `HttpError` with status).
-- `repos.ts`: shared `repos.txt` reader, used by both scripts.
+- `repos.ts`: shared `repos.txt` reader: `readRepos()` for notify, `readChannels()` (every listed channel, with or without a repo) for the bridge.
 - `notify.ts` reads `https://github.com/<repo>/releases.atom` for each repo in `repos.txt` and posts unseen entries through a Discord bot (`DISCORD_BOT_TOKEN` secret).
-- `repos.txt`: `owner/name channel_id [forum tag]`, one per line, `#` comments.
+- `repos.txt`: `owner/name channel_id [forum tag]`, one per line, `#` comments. A line with only a channel ID lists that channel for the bridge alone (no releases).
   - Text/announcement channel or thread/forum post ID → message.
   - Forum/media channel (type 15/16, detected via `GET /channels/:id`) → new post per release; optional tag name must already exist on the forum.
 - `state.json`: seen Atom entry IDs per repo (last 100). A repo with no entry is seeded without posting, so adding a repo never floods a channel. An entry is marked seen only after Discord accepts the post.

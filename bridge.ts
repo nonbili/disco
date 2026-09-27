@@ -1,7 +1,7 @@
 // Poll every readable channel on the Discord server and bridge new messages to one Slack channel.
 
 import { discord, HttpError } from "./discord.ts";
-import { readRepos } from "./repos.ts";
+import { readChannels } from "./repos.ts";
 
 const STATE_FILE = new URL("./bridge-state.json", import.meta.url).pathname;
 const SLACK_API = "https://slack.com/api";
@@ -113,7 +113,7 @@ let skipped = 0;
 
 // Only the channels named in repos.txt are bridged. A listed ID that is neither a guild channel
 // nor an active thread is an archived thread or forum post, so ask Discord about it directly.
-const listed = new Set((await readRepos()).map((t) => t.channel));
+const listed = new Set(await readChannels());
 for (const id of listed) {
   if (known.has(id)) continue;
   try {
