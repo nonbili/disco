@@ -97,7 +97,8 @@
     "tag:github.com,2008:Repository/1006312036/v0.7.6",
     "tag:github.com,2008:Repository/1006312036/v0.7.7",
     "tag:github.com,2008:Repository/1006312036/v0.7.8",
-    "tag:github.com,2008:Repository/1006312036/v0.7.9"
+    "tag:github.com,2008:Repository/1006312036/v0.7.9",
+    "tag:github.com,2008:Repository/1006312036/v0.7.10"
   ],
   "nonbili/NouTube-Desktop": [
     "tag:github.com,2008:Repository/1039067694/v0.3.0",
@@ -112,7 +113,8 @@
     "tag:github.com,2008:Repository/1039067694/v0.2.7",
     "tag:github.com,2008:Repository/1039067694/v0.3.1",
     "tag:github.com,2008:Repository/1039067694/v0.3.2",
-    "tag:github.com,2008:Repository/1039067694/v0.3.3"
+    "tag:github.com,2008:Repository/1039067694/v0.3.3",
+    "tag:github.com,2008:Repository/1039067694/v0.3.4"
   ],
   "nonbili/meron": [
     "tag:github.com,2008:Repository/1269218058/v0.3.6",
@@ -162,6 +164,8 @@
     "tag:github.com,2008:Repository/1269218058/v0.5.1",
     "tag:github.com,2008:Repository/1269218058/android/v0.5.1",
     "tag:github.com,2008:Repository/1269218058/android/v0.5.2",
-    "tag:github.com,2008:Repository/1269218058/v0.5.2"
+    "tag:github.com,2008:Repository/1269218058/v0.5.2",
+    "tag:github.com,2008:Repository/1269218058/android/v0.5.3",
+    "tag:github.com,2008:Repository/1269218058/v0.5.3"
   ]
 }
